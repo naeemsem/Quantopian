@@ -1,0 +1,39 @@
+import numpy as np
+import pandas as pd
+
+import statsmodels
+import statsmodels.api as sm
+from statsmodels.tsa.stattools import coint
+import matplotlib.pyplot as plt
+
+stocka = "SWIN"
+stockb = "SPY"
+prices = get_pricing(symbols= [stocka, stockb], start_date= "09-12-2017", end_date="10-31-2018", fields="price")
+prices.columns = map(lambda x: x.symbol, prices.columns)
+
+prices.head()
+stock_a = prices[stocka]
+stock_b = prices[stockb]
+_, PVAL,_ = coint(stock_a,stock_b) # checking coint pval
+_,pv,_ = coint(stock_b, stock_a) # checking coint pval
+if PVAL < 0.01 or pv < 0.01: 
+    print "most likely coint"
+    print PVAL,pv
+else:
+    print "try again" 
+    print PVAL,pv
+    
+stock_a = sm.add_constant(stock_a)
+results = sm.OLS(stock_b, stock_a).fit()
+stock_a = stock_a[stocka]
+b = results.params[stocka] # running OLS to find optimal hedge ratio
+
+print b
+spread = stock_b - b * stock_a
+
+# displaying data
+spread.plot()
+pd.rolling_mean(spread, window = 20).plot()
+(pd.rolling_mean(spread, window = 20) + 3 * pd.rolling_std(spread, window =5)).plot()
+(pd.rolling_mean(spread, window = 20) - 3 * pd.rolling_std(spread, window =5)).plot()
+plt.legend(['Spread']);
